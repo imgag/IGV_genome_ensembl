@@ -29,7 +29,7 @@ def parse_args():
     """
                 parses the arguments
 
-    :return:
+    :return:    argparse object containing all provided arguments
     """
 
     print "parsing args..."
@@ -88,6 +88,10 @@ def read_gff_file(gff_file_path):
 
     header = []
     content = []
+
+    replaced_genes = 0
+    replaced_transcripts = 0
+
     for line in data:
         if line.startswith('#'):
             if not line.startswith('###'):
@@ -96,7 +100,27 @@ def read_gff_file(gff_file_path):
             # ignore GL000xxx entries:
             if line.startswith('GL000'):
                 continue
-            content.append(line.strip().split('\t'))
+
+            # split line by tab
+            split_line = line.strip().split('\t')
+
+            # treat all entries with ENST id as transcript and entries with ENSG id as genes
+            # generate temp dict with all values:
+            meta_data_dict = {entry.split('=')[0]: entry.split('=')[1] for entry in split_line[8].split(';')}
+            if "ID" in meta_data_dict.keys():
+                if meta_data_dict["ID"].startswith("transcript:ENST") and split_line[2] != "transcript":
+                    split_line[2] = "transcript"
+                    replaced_transcripts += 1
+                elif meta_data_dict["ID"].startswith("gene:ENSG") and split_line[2] != "gene" and \
+                        not split_line[2].endswith("_gene_segment"):
+                    split_line[2] = "gene"
+                    replaced_genes += 1
+
+            content.append(split_line)
+
+    # report replaced genes and transcripts
+    print "\t {} entries with ENSG ids are treated as genes".format(replaced_genes)
+    print "\t {} entries with ENST ids are treated as transcripts".format(replaced_transcripts)
 
     return header, content
 
@@ -281,7 +305,8 @@ def generate_ensg_hgnc_mapping(gff_file_path):
 
     # remove all non gene lines and split by tab
     gff_gene_lines = [line.split('\t') for line in gff_data if
-                      line.split('\t')[2] in ["gene", "pseudogene"] or line.split('\t')[2].endswith('_gene_segment')]
+                      line.split('\t')[2] in ["gene", "pseudogene", "processed_transcript", "RNA"]
+                      or line.split('\t')[2].endswith('_gene_segment') or line.split('\t')[2].endswith('_gene')]
 
     # extract ENSG<->HGNC mapping:
     for line in gff_gene_lines:
@@ -333,6 +358,7 @@ def read_gene_pred_file(gene_pred_file_handle):
     gene_pred_table = [line.split('\t') for line in raw_data]
 
     # close and delete file
+    print "\t" + gene_pred_file_handle.name
     gene_pred_file_handle.close()
     os.remove(gene_pred_file_handle.name)
 
@@ -569,7 +595,6 @@ def main():
     replace_gene_file(os.path.join(temp_folder, gene_file_name), temp_files["genePred file modified"].name)
     # repack the files into a .genome file
     generate_genome_file(temp_folder, args.output)
-
 
     ### cleanup temp files
     # remove generated genePred file
