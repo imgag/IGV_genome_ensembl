@@ -10,7 +10,8 @@ import argparse
 import os
 import tempfile
 from shutil import copyfile
-from urllib2 import urlopen, URLError, HTTPError
+from six.moves.urllib.request import urlopen
+from six.moves.urllib.error import URLError, HTTPError
 import zipfile
 from collections import OrderedDict
 
@@ -32,7 +33,7 @@ def parse_args():
     :return:    argparse object containing all provided arguments
     """
 
-    print "parsing args..."
+    print("parsing args...")
 
     parser = argparse.ArgumentParser(description="Converts gff3 files into genePred format")
     parser.add_argument("gff_file", help="file path to the gff3 input file (with ensembl annotation)")
@@ -53,7 +54,7 @@ def validate_args(args):
     :return:        True if parameter are correct, else False
     """
 
-    print "validating args..."
+    print("validating args...")
 
     # check gff file
     if not os.path.isfile(args.gff_file):
@@ -81,7 +82,7 @@ def read_gff_file(gff_file_path):
         content             content of the gff file as list of lists
     """
 
-    print "reading gff file..."
+    print("reading gff file...")
 
     with open(gff_file_path, 'r') as gff_file:
         data = gff_file.readlines()
@@ -119,8 +120,8 @@ def read_gff_file(gff_file_path):
             content.append(split_line)
 
     # report replaced genes and transcripts
-    print "\t {} entries with ENSG ids are treated as genes".format(replaced_genes)
-    print "\t {} entries with ENST ids are treated as transcripts".format(replaced_transcripts)
+    print("\t {} entries with ENSG ids are treated as genes".format(replaced_genes))
+    print("\t {} entries with ENST ids are treated as transcripts".format(replaced_transcripts))
 
     return header, content
 
@@ -133,7 +134,7 @@ def sort_gff(content):
     :return:            sorted list of lists
     """
 
-    print "sorting gff data..."
+    print("sorting gff data...")
 
     # preprocess chromosome column and positioning column
     for line in content:
@@ -171,7 +172,7 @@ def write_gff(gff_file_handle, header, content):
     :return:
     """
 
-    print "writing gff file..."
+    print("writing gff file...")
 
     # write header:
     for line in header:
@@ -194,21 +195,21 @@ def setup_gff_converter(file_handle):
     :return:
     """
 
-    print "initializing gff3ToGenePred converter..."
+    print("initializing gff3ToGenePred converter...")
 
     # download gff converter
     try:
-        print "downloading converter from: " + gff_converter_url
+        print("downloading converter from: " + gff_converter_url)
         f = urlopen(gff_converter_url)
 
         # write downloaded file to disk
         file_handle.write(f.read())
 
     # handle errors
-    except HTTPError, e:
-        print "HTTP Error:", e.code, gff_converter_url
-    except URLError, e:
-        print "URL Error:", e.reason, gff_converter_url
+    except HTTPError as e:
+        print("HTTP Error:", e.code, gff_converter_url)
+    except URLError as e:
+        print("URL Error:", e.reason, gff_converter_url)
 
     # make tool executable:
     os.chmod(file_handle.name, os.stat(file_handle.name).st_mode | stat.S_IEXEC)
@@ -225,7 +226,7 @@ def run_gff_converter(converter_file_handle, gff_file_handle, gene_pred_file_han
     :return: gene_pred_file_handle:   containing the modified and reopened tempfile
     """
 
-    print "converting gff file..."
+    print("converting gff file...")
 
     # close temporary files before converting
     converter_file_handle.close()
@@ -253,7 +254,7 @@ def read_hgnc_file(file_path):
             hgnc_to_gene:   dict mapping HGNC ids to gene names
     """
 
-    print "reading HGNC file..."
+    print("reading HGNC file...")
 
     # read hgnc file
     with open(file_path, 'r') as hgnc_file:
@@ -273,7 +274,7 @@ def read_hgnc_file(file_path):
         gene_to_hgnc[gene_name] = hgnc_id
         hgnc_to_gene[hgnc_id] = gene_name
 
-    print "\t %i HGNC ids read" % len(hgnc_to_gene)
+    print("\t %i HGNC ids read" % len(hgnc_to_gene))
 
     return gene_to_hgnc, hgnc_to_gene
 
@@ -288,7 +289,7 @@ def generate_ensg_hgnc_mapping(gff_file_path):
             hgnc_to_ensg:   dict mapping HGNC ids to ensembl gene id
     """
 
-    print "generating ensembl gene id <-> HGNC mapping..."
+    print("generating ensembl gene id <-> HGNC mapping...")
 
     ensg_to_hgnc = {}
     hgnc_to_ensg = {}
@@ -337,8 +338,8 @@ def generate_ensg_hgnc_mapping(gff_file_path):
         ensg_to_hgnc[ensg] = hgnc
         hgnc_to_ensg[hgnc] = ensg
 
-    print "\t %i genes with HGNC ids mapped" % len(ensg_to_hgnc)
-    print "\t %i genes without HGNC ids mapped" % len(ensg_to_non_hgnc_gene)
+    print("\t %i genes with HGNC ids mapped" % len(ensg_to_hgnc))
+    print("\t %i genes without HGNC ids mapped" % len(ensg_to_non_hgnc_gene))
 
     return ensg_to_hgnc, hgnc_to_ensg, ensg_to_non_hgnc_gene, non_hgnc_gene_to_ensg
 
@@ -351,14 +352,14 @@ def read_gene_pred_file(gene_pred_file_handle):
     :return:                        list of lists of all entries in the file
     """
 
-    print "reading genePred file..."
+    print("reading genePred file...")
 
     raw_data = gene_pred_file_handle.readlines()
 
     gene_pred_table = [line.split('\t') for line in raw_data]
 
     # close and delete file
-    print "\t" + gene_pred_file_handle.name
+    print("\t" + gene_pred_file_handle.name)
     gene_pred_file_handle.close()
     os.remove(gene_pred_file_handle.name)
 
@@ -376,7 +377,7 @@ def modify_gene_pred_data(gene_pred_data, ensg_to_hgnc, hgnc_to_gene, ensg_to_no
     :return:                        list of lists with all entries of the modified genePred data
     """
 
-    print "modifying genePred file..."
+    print("modifying genePred file...")
 
     hgnc_genes = 0
     non_hgnc_genes = 0
@@ -401,7 +402,7 @@ def modify_gene_pred_data(gene_pred_data, ensg_to_hgnc, hgnc_to_gene, ensg_to_no
         ensg_int = int(ensg[4:])
         line.insert(0, str(ensg_int))
 
-    print "\t gene names from %i hgnc genes and %i non hgnc genes were replaced" % (hgnc_genes, non_hgnc_genes)
+    print("\t gene names from %i hgnc genes and %i non hgnc genes were replaced" % (hgnc_genes, non_hgnc_genes))
 
     return gene_pred_data
 
@@ -415,7 +416,7 @@ def write_gene_pred_file(gene_pred_data, gene_pred_file_handle):
     :return:
     """
 
-    print "writing genePred file..."
+    print("writing genePred file...")
 
     for line in gene_pred_data:
         gene_pred_file_handle.write("\t".join(line))
@@ -435,7 +436,7 @@ def extract_genome_file(genome_file_path, working_directory):
     :return:
     """
 
-    print "extracting genome file..."
+    print("extracting genome file...")
 
     # generate temp folder to extract the files
     temp_folder = os.path.join(working_directory, ".".join(os.path.split(genome_file_path)[1].split('.')[:-1]))
@@ -459,7 +460,7 @@ def modify_genome_property_file(property_file_path):
     :return:                    file name of the gene file
     """
 
-    print "modifying genome property file (property.txt)..."
+    print("modifying genome property file (property.txt)...")
 
     # read property.txt
     with open(property_file_path, 'r') as property_file:
@@ -491,7 +492,7 @@ def replace_gene_file(original_gene_file, generated_gene_file):
     :return:
     """
 
-    print "replacing gene file..."
+    print("replacing gene file...")
 
     copyfile(generated_gene_file, original_gene_file)
 
@@ -505,7 +506,7 @@ def generate_genome_file(src_folder, output_genome_file_name):
     :return:
     """
 
-    print "generating genome file..."
+    print("generating genome file...")
 
     # get all files from src_folder
     files = [f for f in os.listdir(src_folder) if os.path.isfile(os.path.join(src_folder, f))]
@@ -587,7 +588,6 @@ def main():
     # generate temporary directory
     temp_files["zip extraction folder"] = tempfile.mkdtemp()
     # extract given .genome file
-    print temp_files["zip extraction folder"]
     temp_folder = extract_genome_file(args.genome_file, temp_files["zip extraction folder"])
     # modify property.txt
     gene_file_name = modify_genome_property_file(os.path.join(temp_folder, "property.txt"))
