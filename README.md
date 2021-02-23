@@ -6,7 +6,7 @@ The tool takes a gff3 file with Ensembl annotations and converts it into a geneP
 To convert the gff3 file to genePred the tool `gff3ToGenePred` from http://hgdownload.soe.ucsc.edu/admin/exe/ is used (which is automatically downloaded on runtime).
 
 ## Requirements
-- Python 2.7
+- Python 3
 - Linux x64
 
 ## Usage
