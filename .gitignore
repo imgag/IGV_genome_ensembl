@@ -1,5 +1,7 @@
 1kg_v37.genome
-hgnc_complete_set.txt
+hg38.genome
+hgnc_complete_set.tsv
 Homo_sapiens.GRCh37.87.gff3
+Homo_sapiens.GRCh38.103.gff3
 gff3ToGenePred
 .idea/*

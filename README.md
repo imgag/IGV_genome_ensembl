@@ -21,7 +21,11 @@ python gff_to_genepred_converter.py -h
  
 To download all required data and run the tool:
 ```
-make all
-```  
-This generates a .genome file called `1kg_v37_ensembl.genome` which can be imported into IGV via `Genomes` -> `Load Genome from file...`
+make convert_GRCh37
+``` 
+or:
+```
+make convert_GRCh38
+``` 
+This generates a .genome file called `GRCh37_ensembl.genome`/`GRCh38_ensembl.genome` which can be imported into IGV via `Genomes` -> `Load Genome from file...`
 

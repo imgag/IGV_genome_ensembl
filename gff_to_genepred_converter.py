@@ -101,6 +101,9 @@ def read_gff_file(gff_file_path):
             # ignore GL000xxx entries:
             if line.startswith('GL000'):
                 continue
+            # ignore KI270xxx entries:
+            if line.startswith('KI270'):
+                continue
 
             # split line by tab
             split_line = line.strip().split('\t')
@@ -279,11 +282,12 @@ def read_hgnc_file(file_path):
     return gene_to_hgnc, hgnc_to_gene
 
 
-def generate_ensg_hgnc_mapping(gff_file_path):
+def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
     """
                 extracts a ENSG<->HGNC mapping from the gff3 file
 
     :param gff_file_path:   file path to the gff3 file
+    :param valid_hgnc_ids:  set with valid HGNC ids
     :return:
             ensg_to_hgnc:   dict mapping ensembl gene id to HGNC ids
             hgnc_to_ensg:   dict mapping HGNC ids to ensembl gene id
@@ -323,7 +327,13 @@ def generate_ensg_hgnc_mapping(gff_file_path):
 
         # tries to extract HGNC id or saves gene name instead
         try:
+            # skip all non HGNC ids:
+            if "Source:HGNC Symbol%3BAcc:HGNC:" not in meta_data_dict["description"]:
+                raise ValueError
             hgnc = int(meta_data_dict["description"].split(':')[-1][:-1])
+            # skip all invalid HGNC ids
+            if hgnc not in valid_hgnc_ids:
+                raise ValueError
         except (ValueError, KeyError):
             if '.' in meta_data_dict["Name"] or '-' in meta_data_dict["Name"]:
                 ignored_genes_dots.append(meta_data_dict["Name"])
@@ -572,7 +582,8 @@ def main():
     gene_to_hgnc, hgnc_to_gene = read_hgnc_file(args.hgnc_file)
 
     # generate ENSG-HGNC mapping
-    ensg_to_hgnc, hgnc_to_ensg, ensg_to_non_hgnc_gene, non_hgnc_gene_to_ensg = generate_ensg_hgnc_mapping(args.gff_file)
+    ensg_to_hgnc, hgnc_to_ensg, ensg_to_non_hgnc_gene, non_hgnc_gene_to_ensg = \
+        generate_ensg_hgnc_mapping(args.gff_file, hgnc_to_gene.keys())
 
     # read genePred
     gene_pred_data = read_gene_pred_file(temp_files["genePred file"])
