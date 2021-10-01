@@ -328,7 +328,7 @@ def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
         # tries to extract HGNC id or saves gene name instead
         try:
             # skip all non HGNC ids:
-            if "Source:HGNC Symbol%3BAcc:HGNC:" not in meta_data_dict["description"]:
+            if "Source:HGNC Symbol%3BAcc:" not in meta_data_dict["description"]:
                 raise ValueError
             hgnc = int(meta_data_dict["description"].split(':')[-1][:-1])
             # skip all invalid HGNC ids
