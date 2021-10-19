@@ -266,6 +266,8 @@ def read_hgnc_file(file_path):
     # process data
     gene_to_hgnc = {}
     hgnc_to_gene = {}
+    alt_gene_names = {}
+    valid_gene_names = []
 
     # start at 1 to skip header
     for line in hgnc_data[1:]:
@@ -277,17 +279,41 @@ def read_hgnc_file(file_path):
         gene_to_hgnc[gene_name] = hgnc_id
         hgnc_to_gene[hgnc_id] = gene_name
 
+        # create list of alternative gene names which can uniquely be mapped to a valid HGNC name:
+        alt_names = []
+        if split_line[8].strip() != "":
+            if split_line[8].strip().startswith("\""):
+                alt_names += split_line[8].strip()[1:-1].upper().split('|')
+            else:
+                alt_names.append(split_line[8].strip().upper())
+        if split_line[10].strip() != "":
+            if split_line[10].strip().startswith("\""):
+                alt_names += split_line[10].strip()[1:-1].upper().split('|')
+            else:
+                alt_names.append(split_line[10].strip().upper())
+
+        alt_names = set(alt_names)
+
+        for alt_name in alt_names:
+            if alt_name in alt_gene_names.keys():
+                # alt name is not unique -> remove from list
+                del alt_gene_names[alt_name]
+            else:
+                # new alt name <-> hgnc name relation
+                alt_gene_names[alt_name] = gene_name
+
     print("\t %i HGNC ids read" % len(hgnc_to_gene))
 
-    return gene_to_hgnc, hgnc_to_gene
+    return gene_to_hgnc, hgnc_to_gene, alt_gene_names
 
 
-def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
+def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids, alt_gene_names):
     """
                 extracts a ENSG<->HGNC mapping from the gff3 file
 
     :param gff_file_path:   file path to the gff3 file
     :param valid_hgnc_ids:  set with valid HGNC ids
+    :param alt_gene_names:  dict containing mapping from older/alternative gene names to valid HGNC genes
     :return:
             ensg_to_hgnc:   dict mapping ensembl gene id to HGNC ids
             hgnc_to_ensg:   dict mapping HGNC ids to ensembl gene id
@@ -303,6 +329,10 @@ def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
 
     ignored_genes = []
     ignored_genes_dots = []
+
+    updated_gene_names = 0
+    genes_without_names = 0
+    genes_without_description = 0
 
     # read file content without header
     with open(gff_file_path, 'r') as gff_file:
@@ -335,14 +365,33 @@ def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
             if hgnc not in valid_hgnc_ids:
                 raise ValueError
         except (ValueError, KeyError):
-            if '.' in meta_data_dict["Name"] or '-' in meta_data_dict["Name"]:
-                ignored_genes_dots.append(meta_data_dict["Name"])
-            else:
-                ignored_genes.append(meta_data_dict["Name"])
-
             # use gene name instead of HGNC id:
-            ensg_to_non_hgnc_gene[ensg] = meta_data_dict["Name"]
-            non_hgnc_gene_to_ensg[meta_data_dict["Name"]] = ensg
+            if "Name" in meta_data_dict.keys():
+                if '.' in meta_data_dict["Name"] or '-' in meta_data_dict["Name"]:
+                    ignored_genes_dots.append(meta_data_dict["Name"])
+                else:
+                    ignored_genes.append(meta_data_dict["Name"])
+                gene_name = meta_data_dict["Name"].upper()
+            else:
+                genes_without_names += 1
+                # use description as fallback
+                if "description" in meta_data_dict.keys():
+                    description = meta_data_dict["description"] \
+                        .replace("%2C", ",") \
+                        .replace("%3B", ";") \
+                        .replace("%26", "&")
+                    gene_name = ensg + " (" + description + ")"
+                else:
+                    # skip gene
+                    genes_without_description += 1
+                    continue
+
+            # replace alternative or old gene names with current valid HGNC gene names
+            if gene_name in alt_gene_names.keys():
+                gene_name = alt_gene_names[gene_name]
+                updated_gene_names += 1
+            ensg_to_non_hgnc_gene[ensg] = gene_name
+            non_hgnc_gene_to_ensg[gene_name] = ensg
             continue
 
         ensg_to_hgnc[ensg] = hgnc
@@ -350,6 +399,9 @@ def generate_ensg_hgnc_mapping(gff_file_path, valid_hgnc_ids):
 
     print("\t %i genes with HGNC ids mapped" % len(ensg_to_hgnc))
     print("\t %i genes without HGNC ids mapped" % len(ensg_to_non_hgnc_gene))
+    print("\t %i genes without names" % genes_without_names)
+    print("\t %i genes without description" % genes_without_description)
+    print("\t %i gene names were updated to current HGNC symbols" % updated_gene_names)
 
     return ensg_to_hgnc, hgnc_to_ensg, ensg_to_non_hgnc_gene, non_hgnc_gene_to_ensg
 
@@ -391,6 +443,7 @@ def modify_gene_pred_data(gene_pred_data, ensg_to_hgnc, hgnc_to_gene, ensg_to_no
 
     hgnc_genes = 0
     non_hgnc_genes = 0
+    genes_without_name = 0
     for line in gene_pred_data:
 
         # remove "transcript:" in front of the ENST id:
@@ -404,8 +457,12 @@ def modify_gene_pred_data(gene_pred_data, ensg_to_hgnc, hgnc_to_gene, ensg_to_no
             gene_name = hgnc_to_gene[ensg_to_hgnc[ensg]]
             hgnc_genes += 1
         except KeyError:
-            gene_name = ensg_to_non_hgnc_gene[ensg]
-            non_hgnc_genes += 1
+            try:
+                gene_name = ensg_to_non_hgnc_gene[ensg]
+                non_hgnc_genes += 1
+            except KeyError:
+                gene_name = ensg
+                genes_without_name += 1
         line[11] = gene_name
 
         # add ENSG number as gene id in the first column
@@ -413,6 +470,7 @@ def modify_gene_pred_data(gene_pred_data, ensg_to_hgnc, hgnc_to_gene, ensg_to_no
         line.insert(0, str(ensg_int))
 
     print("\t gene names from %i hgnc genes and %i non hgnc genes were replaced" % (hgnc_genes, non_hgnc_genes))
+    print("\t %i genes do not have a name (only id)" % (genes_without_name))
 
     return gene_pred_data
 
@@ -579,11 +637,11 @@ def main():
 
     ### modify genePred file
     # parse HGNC file:
-    gene_to_hgnc, hgnc_to_gene = read_hgnc_file(args.hgnc_file)
+    gene_to_hgnc, hgnc_to_gene, alt_gene_names = read_hgnc_file(args.hgnc_file)
 
     # generate ENSG-HGNC mapping
     ensg_to_hgnc, hgnc_to_ensg, ensg_to_non_hgnc_gene, non_hgnc_gene_to_ensg = \
-        generate_ensg_hgnc_mapping(args.gff_file, hgnc_to_gene.keys())
+        generate_ensg_hgnc_mapping(args.gff_file, hgnc_to_gene.keys(), alt_gene_names)
 
     # read genePred
     gene_pred_data = read_gene_pred_file(temp_files["genePred file"])
