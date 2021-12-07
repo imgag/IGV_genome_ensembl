@@ -525,7 +525,7 @@ def modify_genome_property_file(property_file_path):
                 gene file name
 
     :param property_file_path:  path to the property.txt
-    :return:                    file name of the gene file
+    :return:                    file name of the gene file,
     """
 
     print("modifying genome property file (property.txt)...")
@@ -548,7 +548,29 @@ def modify_genome_property_file(property_file_path):
         for entry in properties:
             property_file.write(entry + "=" + properties[entry] + "\n")
 
-    return properties["geneFile"]
+    return properties["geneFile"], properties["chrAliasFile"]
+
+
+def modify_chr_alias_file(alias_file_path):
+    """
+                modifies the chr alias file in the genome file to map chrMT to chrM
+
+    :param alias_file_path:     path to chr alias file
+    :return:
+    """
+
+    # read alias file
+    with open(alias_file_path, 'r') as alias_file:
+        alias_file_content = alias_file.readlines()
+
+    # write alias file
+    with open(alias_file_path, 'w') as alias_file:
+        for line in alias_file_content:
+            if line.startswith("chrM"):
+                line = line.strip() + "\tchrMT\tM\n"
+            alias_file.write(line)
+
+    return
 
 
 def replace_gene_file(original_gene_file, generated_gene_file):
@@ -659,7 +681,9 @@ def main():
     # extract given .genome file
     temp_folder = extract_genome_file(args.genome_file, temp_files["zip extraction folder"])
     # modify property.txt
-    gene_file_name = modify_genome_property_file(os.path.join(temp_folder, "property.txt"))
+    gene_file_name, chr_alias_file_name = modify_genome_property_file(os.path.join(temp_folder, "property.txt"))
+    # modify chr alias file
+    modify_chr_alias_file(os.path.join(temp_folder, chr_alias_file_name))
     # replace gene file
     replace_gene_file(os.path.join(temp_folder, gene_file_name), temp_files["genePred file modified"].name)
     # repack the files into a .genome file
