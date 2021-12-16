@@ -1,6 +1,6 @@
 {
-  "id": "hg38_test",
-  "name": "Human (GRCh38/hg38) test",
+  "id": "hg38_ensembl",
+  "name": "Human (GRCh38/hg38) Ensemble",
   "fastaURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa",
   "indexURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa.fai",
   "cytobandURL": "https://s3.amazonaws.com/igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz",
@@ -29,7 +29,8 @@
     "chr21",
     "chr22",
     "chrX",
-    "chrY"
+    "chrY",
+    "chrM"
   ],
   "tracks": [
     {
@@ -42,11 +43,6 @@
       "format": "refgene",
       "url": "https://s3.amazonaws.com/igv.org.genomes/hg38/ncbiRefSeq.sorted.txt.gz",
       "indexURL": "https://s3.amazonaws.com/igv.org.genomes/hg38/ncbiRefSeq.sorted.txt.gz.tbi"
-    },
-    {
-      "name": "Gencode v24 genes",
-      "format": "gtf",
-      "url": "https://s3.amazonaws.com/igv.org.genomes/hg19/gencode.v24.genes.gtf.gz"
     }
   ]
 }
