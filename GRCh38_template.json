@@ -1,6 +1,6 @@
 {
   "id": "hg38_ensembl",
-  "name": "Human (GRCh38/hg38) Ensemble",
+  "name": "Human (GRCh38/hg38) Ensembl",
   "fastaURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa",
   "indexURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa.fai",
   "cytobandURL": "https://s3.amazonaws.com/igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz",
@@ -34,9 +34,9 @@
   ],
   "tracks": [
     {
-      "name": "Ensemble Genes",
+      "name": "Ensembl Genes",
       "format": "gff3",
-      "url": "http://ftp.ensembl.org/pub/current_gff3/homo_sapiens/Homo_sapiens.GRCh38.105.chr.gff3.gz"
+      "url": "https://ftp.ensembl.org/pub/release-110/gff3/homo_sapiens/Homo_sapiens.GRCh38.110.gff3.gz"
     },
     {
       "name": "Refseq Genes",
