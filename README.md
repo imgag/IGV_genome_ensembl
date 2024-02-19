@@ -1,5 +1,7 @@
-# IGV_genome_ensembl
-A IGV reference genome annotated with Ensembl gene/transcript info
+# Note: This project is discontinued! See the [GSvar documentation](https://github.com/imgag/ngs-bits/blob/master/doc/GSvar/igv_integration.md#igv-gene-trackgenome) for details how we build a IGV genome based on Ensembl now.
+
+# IGV genome based on Ensembl
+A IGV reference genome annotated with Ensembl gene/transcript info.
 
 ## Requirements
 - Python 3
